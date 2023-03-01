@@ -23,6 +23,9 @@ def _ae_loss(tag0, tag1, mask):
     mask = mask.eq(2)
     num  = num.unsqueeze(2)
     num2 = (num - 1) * num
+    print(tag_mean.shape)
+    print(tag_mean.unsqueeze(1).shape)
+    print(tag_mean.unsqueeze(2).shape)
     dist = tag_mean.unsqueeze(1) - tag_mean.unsqueeze(2)
     dist = 1 - torch.abs(dist)
     dist = nn.functional.relu(dist, inplace=True)

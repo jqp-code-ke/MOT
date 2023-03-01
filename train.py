@@ -24,14 +24,14 @@ from core.nnet.py_factory import NetworkFactory
 
 torch.backends.cudnn.enabled   = True
 torch.backends.cudnn.benchmark = True
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 def parse_args():
     parser = argparse.ArgumentParser(description="Training Script")
     parser.add_argument("cfg_file", help="config file", type=str)
     parser.add_argument("--iter", dest="start_iter",
                         help="train at iteration i",
                         default=0, type=int)
-    parser.add_argument("--workers", default=4, type=int)
+    parser.add_argument("--workers", default=1, type=int)
     parser.add_argument("--initialize", action="store_true")
 
     parser.add_argument("--distributed", action="store_true")
@@ -41,7 +41,7 @@ def parse_args():
                         help="node rank for distributed training")
     parser.add_argument("--dist-url", default=None, type=str,
                         help="url used to set up distributed training")
-    parser.add_argument("--dist-backend", default="nccl", type=str)
+    parser.add_argument("--dist-backend", default="gloo", type=str)
 
     args = parser.parse_args()
     return args
@@ -122,7 +122,8 @@ def train(training_dbs, validation_db, system_config, model, args):
     pinned_validation_queue = queue.Queue(5)
 
     # allocating resources for parallel reading
-    training_tasks = init_parallel_jobs(system_config, training_dbs, training_queue, data_sampling_func, True)
+    # training_tasks = init_parallel_jobs(system_config, training_dbs, training_queue, data_sampling_func, True)
+    training_tasks = init_parallel_jobs(system_config, training_dbs, training_queue, data_sampling_func, False)
     if val_iter:
         validation_tasks = init_parallel_jobs(system_config, [validation_db], validation_queue, data_sampling_func, False)
 
@@ -218,6 +219,7 @@ def main(gpu, ngpus_per_node, args):
     workers = args.workers
     print("Process {}: using {} workers".format(rank, workers))
     training_dbs = [datasets[dataset](config["db"], split=train_split, sys_config=system_config) for _ in range(workers)]
+    # training_dbs = datasets[dataset](config["db"], split=train_split, sys_config=system_config)
     validation_db = datasets[dataset](config["db"], split=val_split, sys_config=system_config)
 
     if rank == 0:
@@ -226,8 +228,10 @@ def main(gpu, ngpus_per_node, args):
 
         print("db config...")
         pprint.pprint(training_dbs[0].configs)
+        # pprint.pprint(training_dbs.configs)
 
         print("len of db: {}".format(len(training_dbs[0].db_inds)))
+        # print("len of db: {}".format(len(training_dbs.db_inds)))
         print("distributed: {}".format(args.distributed))
 
     train(training_dbs, validation_db, system_config, model, args)

@@ -42,13 +42,15 @@ class NetworkFactory(object):
         self.network = Network(self.model, self.loss)
 
         if distributed:
-            from apex.parallel import DistributedDataParallel, convert_syncbn_model
+            # from apex.parallel import DistributedDataParallel, convert_syncbn_model
             torch.cuda.set_device(gpu)
             self.network = self.network.cuda(gpu)
-            self.network = convert_syncbn_model(self.network)
-            self.network = DistributedDataParallel(self.network)
+            # self.network = convert_syncbn_model(self.network)
+            # self.network = DistributedDataParallel(self.network)
+            print('true')
         else:
             self.network = DataParallel(self.network, chunk_sizes=system_config.chunk_sizes)
+            print('false distributed')
 
         total_params = 0
         for params in self.model.parameters():
@@ -92,6 +94,7 @@ class NetworkFactory(object):
         self.optimizer.zero_grad()
         loss = self.network(xs, ys)
         loss = loss.mean()
+        print(loss)
         loss.backward()
         self.optimizer.step()
 

@@ -46,7 +46,7 @@ def cornernet(system_configs, db, k_ind, data_aug, debug):
     gaussian_iou  = db.configs["gaussian_iou"]
     gaussian_rad  = db.configs["gaussian_radius"]
 
-    max_tag_len = 128
+    max_tag_len = 1024
 
     # allocating memory
     images      = np.zeros((batch_size, 3, input_size[0], input_size[1]), dtype=np.float32)
@@ -69,38 +69,77 @@ def cornernet(system_configs, db, k_ind, data_aug, debug):
 
         # reading image
         image_path = db.image_path(db_ind)
-        image      = cv2.imread(image_path)
+        # print(image_path)
+        # image      = cv2.imread(image_path)
+        img = np.load(image_path).astype(np.uint8)
+        pre = img[:, :, 0:3]
+        cur = img[:, :, 3:6]
+        post = img[:, :, 6:9]
 
         # reading detections
+        # print(db_ind)
         detections = db.detections(db_ind)
 
         # cropping an image randomly
         if not debug and rand_crop:
-            image, detections = random_crop(image, detections, rand_scales, input_size, border=border)
+            # image, detections = random_crop(image, detections, rand_scales, input_size, border=border)
+            cur, detections_cur = random_crop(cur, detections, rand_scales, input_size, border=border)
+            pre, detections_pre = random_crop(pre, detections, rand_scales, input_size, border=border)
+            post, detections_post = random_crop(post, detections, rand_scales, input_size, border=border)
 
-        image, detections = _resize_image(image, detections, input_size)
-        detections = _clip_detections(image, detections)
+        # image, detections = _resize_image(image, detections, input_size)
+        # detections = _clip_detections(image, detections)
+        cur, detections_cur = _resize_image(cur, detections_cur, input_size)
+        detections_cur = _clip_detections(cur, detections_cur)
+
+        pre, detections_pre = _resize_image(pre, detections_pre, input_size)
+        detections_pre = _clip_detections(pre, detections_pre)
+
+        post, detections_post = _resize_image(post, detections_post, input_size)
+        detections_post = _clip_detections(post, detections_post)
 
         width_ratio  = output_size[1] / input_size[1]
         height_ratio = output_size[0] / input_size[0]
 
         # flipping an image randomly
         if not debug and np.random.uniform() > 0.5:
-            image[:] = image[:, ::-1, :]
-            width    = image.shape[1]
-            detections[:, [0, 2]] = width - detections[:, [2, 0]] - 1
+            # image[:] = image[:, ::-1, :]
+            cur[:] = cur[:, ::-1, :]
+            pre[:] = pre[:, ::-1, :]
+            post[:] = post[:, ::-1, :]
+
+            width    = cur.shape[1]
+            detections_cur[:, [0, 2]] = width - detections_cur[:, [2, 0]] - 1
 
         if not debug:
-            image = image.astype(np.float32) / 255.
+            # image = image.astype(np.float32) / 255.
+            cur = cur.astype(np.float32) / 255.
+            pre = pre.astype(np.float32) / 255.
+            post = post.astype(np.float32) / 255.
             if rand_color:
-                color_jittering_(data_rng, image)
+                # color_jittering_(data_rng, image)
+                color_jittering_(data_rng, cur)
+                color_jittering_(data_rng, pre)
+                color_jittering_(data_rng, post)
                 if lighting:
-                    lighting_(data_rng, image, 0.1, db.eig_val, db.eig_vec)
-            normalize_(image, db.mean, db.std)
+                    # lighting_(data_rng, image, 0.1, db.eig_val, db.eig_vec)
+                    lighting_(data_rng, cur, 0.1, db.eig_val, db.eig_vec)
+                    lighting_(data_rng, pre, 0.1, db.eig_val, db.eig_vec)
+                    lighting_(data_rng, post, 0.1, db.eig_val, db.eig_vec)
+            # normalize_(image, db.mean, db.std)
+            normalize_(cur, db.mean, db.std)
+            normalize_(pre, db.mean, db.std)
+            normalize_(post, db.mean, db.std)
+        # image = np.dstack((pre, cur, post))
+        image = cur
         images[b_ind] = image.transpose((2, 0, 1))
+        detections = detections_cur
 
         for ind, detection in enumerate(detections):
+            print(ind)
+            # print(detection)
             category = int(detection[-1]) - 1
+            # print(category)
 
             xtl, ytl = detection[0], detection[1]
             xbr, ybr = detection[2], detection[3]

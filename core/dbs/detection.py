@@ -7,15 +7,15 @@ class DETECTION(BASE):
         super(DETECTION, self).__init__()
 
         # Configs for training
-        self._configs["categories"]      = 80
+        self._configs["categories"]      = 1
         self._configs["rand_scales"]     = [1]
         self._configs["rand_scale_min"]  = 0.8
         self._configs["rand_scale_max"]  = 1.4
         self._configs["rand_scale_step"] = 0.2
 
         # Configs for both training and testing
-        self._configs["input_size"]      = [383, 383]
-        self._configs["output_sizes"]    = [[96, 96], [48, 48], [24, 24], [12, 12]]
+        self._configs["input_size"]      = [256, 256]
+        self._configs["output_sizes"]    = [[64, 64]]
 
         self._configs["score_threshold"] = 0.05
         self._configs["nms_threshold"]   = 0.7
@@ -41,8 +41,8 @@ class DETECTION(BASE):
         self._configs["rand_color"]      = False
         self._configs["rand_center"]     = True
 
-        self._configs["init_sizes"]      = [192, 255]
-        self._configs["view_sizes"]      = []
+        # self._configs["init_sizes"]      = [192, 255]
+        # self._configs["view_sizes"]      = []
 
         self._configs["min_scale"]       = 16
         self._configs["max_scale"]       = 32
